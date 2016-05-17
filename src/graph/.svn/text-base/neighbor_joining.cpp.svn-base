@@ -1,0 +1,1396 @@
+
+#include"neighbor_joining.h"
+
+
+Graph_Node* neighborJoining(float** distance_matrix, int n, int* node_to_cut, int neighbor_joining_metric)
+{
+	int i,j;
+		
+	//printMatrix(distance_matrix,n);
+
+	//keep count of nodes
+	int node=n;
+
+	//the root
+	Graph_Node* tree= new Graph_Node(-1);
+	
+	//the vector of net divergences
+	float* r= (float*)malloc(sizeof(float)*n);
+	//vector of convertion between the graph node id and the index in the matrix of differences
+	float* index_to_id= (float*)malloc(sizeof(float)*n);
+	//vector of convertion between the index used now in the distance matrix and the index used in the last iteraction
+	float* index_to_last_index= (float*)malloc(sizeof(float)*n);
+
+	//create a star tree;
+	for(i=0;i<n;i++)
+	{
+		Graph_Node* new_node= new Graph_Node(i);
+		index_to_id[i]=i;
+
+		tree->insertConnection(new_node);
+	}
+
+	float last_minimum_distance=0;
+	float last_avg=0;
+	float last_difference=0;
+	float r_avg;
+	float last_r=0;
+	float diff_diff;
+	
+	float max_difference=-1;
+	int node_before=-1;
+	int cut_node=-1;
+	
+#ifdef	PRINT_NJ_INFO		
+	float real_diff_avg=0;
+	float real_diff_count=0;
+
+	float last_norm_min=0;
+	float last_norm_avg=0;
+		
+	//maximum difference between subsequent nodes of the difference between minimum and average distance
+	float max_m=-1;
+	float max_m2=-1;
+	float max_avg=-1;
+
+		
+	
+	printf("r_avg \t");
+	printf("minimum distance \t");
+	printf("avg distance \t");
+	printf("(avg-min_dist) \t");
+		
+	printf("minimum distance diff \t");
+	//printf("avg diff \t");
+	//printf("avg diff/avg \t");
+	printf("Neighbor J. metric\t");
+	printf("node\n");
+
+#endif
+	
+
+	//repeat the steps, till we have no nodes to group
+	for(;n>2;)
+	{
+		r_avg=0;
+		//calculate the net divergence for each variable
+		for(i=0;i<n;i++)
+		{
+			r[i]=0.0f;
+
+			//sum only the distances below the main diagonal in the matrix
+			//The @ are the numbers that would be summed in the example:
+			//[ x      ]		
+			//[ @ x	   ]
+			//[ @ @ x  ]
+			//[ @ @ @ x]
+			for(j=i+1;j<n;j++)
+			{
+				r[i]+= distance_matrix[j][i];
+			}
+			
+			for(j=0;j<i;j++)
+			{
+				r[i]+= distance_matrix[i][j];
+			}
+
+			r_avg+=r[i];
+		}
+
+		r_avg= r_avg/n;
+
+
+		//calculate new distance matrix M() using a metric
+		for(i=0;i<n;i++)
+		{
+			//calculate only in the spaces above the main diagonal in the matrix, that are not used elsewhere
+			//The @ are the numbers that would be used in the example:
+			//[ x @ @ @ ]		
+			//[   x	@ @ ]
+			//[     x @ ]
+			//[       x ]
+			
+			for(j=0;j<i;j++)
+			{
+				distance_matrix[j][i]= distance_matrix[i][j] - (r[i]+r[j])/(n-2);
+			}
+		}
+
+		//printMatrix(distance_matrix, n);
+
+
+		float M_minimum= distance_matrix[0][1];
+		int node_index_a=0;
+		int node_index_b=1;
+		float distance_ab= distance_matrix[1][0];
+		float avg_distance= 0.0;
+		int counter=0;
+		
+
+		//find the two nodes with smallest M()
+		for(i=0;i<n;i++)
+		{
+
+			//The @ are the numbers that would be accessed in the example:
+			//[ x @ @ @ ]		
+			//[   x	@ @ ]
+			//[     x @ ]
+			//[       x ]
+			
+			for(j=0;j<i;j++)
+			{
+				if(distance_matrix[j][i]<M_minimum)
+				{
+					M_minimum= distance_matrix[j][i];
+					node_index_a= i;
+					node_index_b= j;
+					distance_ab= distance_matrix[i][j];
+				}
+					
+				avg_distance+= distance_matrix[j][i];
+				counter++;
+			}
+		}
+
+		avg_distance= avg_distance/counter;
+
+		/*
+		printf("r avg %f\n",r_avg);
+		printf("minimum distance %f\n",M_minimum);
+		printf("minimum avg %f\n",avg_distance);
+		printf("difference %f\n", avg_distance - M_minimum);
+		
+		printf("minimum distance diff %f\n", M_minimum - last_minimum_distance);
+		printf("avg diff %f\n", avg_distance - last_avg);
+		last_avg= avg_distance;
+		last_minimum_distance= M_minimum;
+		
+		printf("node: %d\n",node);
+		*/
+		
+#ifdef	PRINT_NJ_INFO		
+		
+		printf("%.2f\t",r_avg);
+		printf("%.2f\t",M_minimum);
+		printf("%.2f\t",avg_distance);
+		printf("%f\t", avg_distance - M_minimum);
+		
+		printf("%f\t", M_minimum - last_minimum_distance);
+#endif
+		//printf("%f\t", avg_distance - last_avg);
+		//printf("%f\t", (avg_distance - last_avg)/avg_distance);
+		
+		//float difference= last_avg - last_minimum_distance - (avg_distance - M_minimum);
+		
+		//float difference= fabs((avg_distance - last_avg)/avg_distance);
+
+		float difference;
+		
+		//printf("%f\t", difference);
+		//printf("%f\t", difference);
+		
+		//last_avg= avg_distance;
+		//last_minimum_distance= M_minimum;
+		
+
+	
+
+		
+		
+		//float difference= last_avg - last_minimum_distance - (avg_distance - M_minimum);
+		//float difference= M_minimum - last_minimum_distance;
+
+		switch(neighbor_joining_metric)
+		{
+			//Danilo's metric
+			case 0:
+			{
+				
+#ifdef	PRINT_NJ_INFO		
+				difference = ((last_r - (r_avg)) *  (last_r - (r_avg)))/(last_r);
+				
+				printf("%.2f\t", difference);
+				
+				difference = ((last_r - (r_avg)))/(last_r);
+				
+				printf("%.2f\t", difference);
+				
+
+
+				difference = (last_minimum_distance - M_minimum)/(M_minimum);
+				//8
+				printf("%.2f\t", difference);
+				
+				
+				difference = (last_avg - last_minimum_distance - (avg_distance - M_minimum))/(avg_distance - M_minimum);
+				
+				printf("%.2f\t", difference);
+				
+				
+				float diff_norm_min = fabs((last_minimum_distance - M_minimum)/(M_minimum) - last_norm_min);
+				
+				printf("%.2f\t", fabs(diff_norm_min));
+				//if(diff_norm_min > max_m && n != 3 )
+				//{
+				//	count++;
+				//}
+				
+				last_norm_min = difference;
+				
+				
+				float diff_norm_avg_2 = fabs((last_avg - avg_distance)/(avg_distance) - last_norm_avg);
+				printf("%.2f\t", fabs(diff_norm_avg_2));
+
+				//if(diff_norm_avg > max_avg && n != 3 )
+				//{
+				//	count++;
+				//	//printf("d\n");
+				//}
+				
+				last_norm_avg = diff_norm_avg_2;
+				
+				
+				difference = (last_avg - avg_distance);
+				
+				//12
+				printf("%.2f\t", difference);
+				
+				
+				real_diff_avg+= avg_distance;
+				real_diff_count++;
+				
+				float diff_norm_avg = (last_avg - avg_distance)/(avg_distance);
+
+				printf("%.2f\t", diff_norm_avg);
+				int count=0;
+				if(diff_norm_avg > max_avg && n != 3 )
+				{
+					count++;
+				}
+#endif
+				
+				
+				//difference = ((last_avg - last_minimum_distance - (avg_distance - M_minimum))/(avg_distance - M_minimum));// * diff_norm_min;
+				difference = (( avg_distance - M_minimum - (last_avg - last_minimum_distance) )/(avg_distance - M_minimum));// * diff_norm_min;
+				
+				//diff_diff= difference - last_difference;
+				diff_diff= fabs(difference) ;
+				
+				//printf("%.2f\t", difference);
+				
+
+#ifdef	PRINT_NJ_INFO		
+				printf("%.2f\t", diff_diff);
+				
+				
+				//difference = (last_avg - last_minimum_distance - (avg_distance - M_minimum))/(real_diff_avg/real_diff_count);
+				
+				//diff_diff= fabs(difference);
+				
+				//printf("%.2f\t", diff_diff);
+
+				//difference = (last_avg + last_minimum_distance - (avg_distance + M_minimum))/(avg_distance + M_minimum);
+				//difference = (last_minimum_distance - (M_minimum))/(M_minimum);
+
+				//when i == n-1 the difference while trying to normalize itself
+				//will end up dividing by zero or by a very small number.
+				//This results from the trivial solution that the best BB is the one having all variables together
+		
+				printf("%f\t", diff_diff);
+				printf("%d\n",node);
+
+			//	if(diff_diff > max_difference && n != 3  )
+			//	{
+			//		count+=3;
+					//printf("a\n");
+			//	}
+				
+			//	if(diff_diff > 5*max_difference && n != 3  )
+			//	{
+			//		count++;
+			//		//printf("a\n");
+			//	}
+#endif				
+
+				
+				if(diff_diff > max_difference)
+				{
+					node_before= node;
+					max_difference= diff_diff;
+				}
+				
+
+				//if(count>=3)
+				if((fabs(diff_diff) < fabs(max_difference))&& (node_before != -1))
+				{
+					//max_m= M_minimum;
+					//max_m2= M_minimum - last_minimum_distance;
+					//max_avg= diff_norm_avg; //(last_avg - avg_distance)/(avg_distance);
+					//max_m= diff_norm_min; //(last_avg - avg_distance)/(avg_distance);
+					cut_node= node_before;
+					//printf("y%d\n", node);
+					node_before= -1;
+				}
+			}
+			break;
+
+			//Alexandre's metric
+			case 1:
+				difference= fabs((avg_distance - last_avg)/avg_distance);
+
+				//n equal a 3 is the trivial BB with all variables in one block
+				if(difference > max_difference && n != 3 )
+				{
+					max_difference= difference;
+					cut_node= node;
+				}
+				break;
+
+			//not normalized
+			case 2:
+				difference= last_avg - last_minimum_distance - (avg_distance - M_minimum);
+	
+				//n equal a 3 is the trivial BB with all variables in one block
+				if(difference > max_difference && n!=3)
+				{
+					max_difference= difference;
+					cut_node= node;
+				}
+				break;
+			
+			//R metric
+			case 3:
+				difference = (last_avg - last_minimum_distance - (avg_distance - M_minimum))/(avg_distance - M_minimum);
+				printf("%.2f\t", difference);
+				
+				difference= fabs((M_minimum - last_minimum_distance)/M_minimum);
+				printf("b %.2f\t", difference);
+
+				
+				difference = (last_avg - last_minimum_distance - (avg_distance - M_minimum))/(avg_distance - M_minimum);
+			//	
+				//printf("%.2f\t", difference);
+				
+				difference= last_avg - last_minimum_distance - (avg_distance - M_minimum);
+				
+				printf("aaa  %.2f\t", difference);
+
+				difference = ((last_r - (r_avg)) *  (last_r - (r_avg)))/(last_r);
+				float difference2 = difference;
+			//	
+				printf("%.2f\t", difference);
+				
+				difference= last_avg - last_minimum_distance - (avg_distance - M_minimum);
+				
+				printf("%.2f\t", difference);
+				printf("%.2f\t", difference2);
+	
+				//diff_diff= last_difference - difference;
+				diff_diff= fabs(difference * difference2);
+				
+				//printf("%.2f\t", diff_diff);
+
+				//difference = (last_avg + last_minimum_distance - (avg_distance + M_minimum))/(avg_distance + M_minimum);
+				//difference = (last_minimum_distance - (M_minimum))/(M_minimum);
+
+				//when i == n-1 the difference while trying to normalize itself
+				//will end up dividing by zero or by a very small number.
+				//This results from the trivial solution that the best BB is the one having all variables together
+				if(diff_diff > max_difference && n != 3 )
+				{
+					max_difference= diff_diff;
+					cut_node= node;
+				}
+				break;
+
+
+		}
+		
+
+		last_avg= avg_distance;
+		last_minimum_distance= M_minimum;
+		last_difference= difference;
+		last_r= r_avg;
+
+		//creating new node and inserting it
+		Graph_Node* tmp_node= new Graph_Node(node);
+		node++;
+		Graph_Node* tmp_node_a= tree->removeConnectionWithId(index_to_id[node_index_a]);
+		Graph_Node* tmp_node_b= tree->removeConnectionWithId(index_to_id[node_index_b]);
+
+		//calculate the edge weights (also called branch length)
+		float connection_weight_a= distance_ab/2 + (r[node_index_a]-r[node_index_b])/(2*(n-2)) ;
+		float connection_weight_b= distance_ab - connection_weight_a;
+
+		//printf("%f %f\n",connection_weight_a, connection_weight_b);
+		
+		tmp_node->insertConnection(tmp_node_a, connection_weight_a);
+		tmp_node->insertConnection(tmp_node_b, connection_weight_b);
+		tree->insertConnection(tmp_node);
+
+		//copying old distances to another place
+		for(i=0;i<n;i++)
+		{
+			for(j=0;j<i;j++)
+			{
+				distance_matrix[j][i]= distance_matrix[i][j];
+			}
+
+			//save a temporary map from indexes to graph's ids in the unused diagonal of the matrix
+			distance_matrix[i][i]=index_to_id[i];
+
+		}
+		
+		//built the new map from indexes to graph's ids and set the diagonal of the matrix as map from the new indexes to the last
+		index_to_id[0]= node -1;
+		j=1;
+		for(i=0;i<n;i++)
+		{
+			if(i!=node_index_a&&i!=node_index_b)
+			{
+				index_to_id[j]= distance_matrix[i][i];
+				index_to_last_index[j]=i;
+				j++;
+			}
+		}
+
+		
+		//creating new distances from the new node to the other nodes and decrease the number of nodes N
+		n--;
+		
+		for(i=1;i<n;i++)
+		{
+			distance_matrix[i][0]= (oldDistance(node_index_a, index_to_last_index[i], distance_matrix) + oldDistance(node_index_b, index_to_last_index[i], distance_matrix) - distance_ab)/2;
+		
+		}
+
+		for(i=1;i<n;i++)
+		{
+			for(j=1;j<i;j++)
+			{
+				distance_matrix[i][j]= oldDistance(index_to_last_index[i],index_to_last_index[j], distance_matrix);
+			}
+		}
+
+		//printMatrix(distance_matrix,n);
+
+	}
+
+	//for n = 2, there are 2 nodes and 1 distance, so a root between both nodes is created 
+	//and this distance is put in the weight of one of the edges, 
+	//the other receives 0 as an edge's weight. 
+	//(The important point is that the sum of both edges are equal to the distance in the matrix.)
+	if(n==2)
+	{
+		//since the unique nodes available are two, their indexes in the matrix are:
+		int node_index_a=0;
+		int node_index_b=1;
+
+		//creating new node and inserting it
+		Graph_Node* tmp_node= new Graph_Node(node);
+		node++;
+		Graph_Node* tmp_node_a= tree->removeConnectionWithId(index_to_id[node_index_a]);
+		Graph_Node* tmp_node_b= tree->removeConnectionWithId(index_to_id[node_index_b]);
+
+		//calculate the edge weights (also called branch length)
+		float connection_weight_a= distance_matrix[1][0];
+		float connection_weight_b= 0;
+
+		tmp_node->insertConnection(tmp_node_a, connection_weight_a);
+		tmp_node->insertConnection(tmp_node_b, connection_weight_b);
+		tree->insertConnection(tmp_node);
+		
+	}
+
+	Graph_Node* new_root= tree->connection[0];
+	delete tree;
+	
+	free(r);
+	free(index_to_id);
+	free(index_to_last_index);
+
+	printf("cut nodes >= %d\n",cut_node);
+	
+	if(node_to_cut!=NULL)
+	{
+		*node_to_cut= cut_node;
+	}
+
+	return new_root;
+}
+
+Graph_Node* neighborJoining(float** distance_matrix, int n)
+{
+	int i,j;
+		
+	//printMatrix(distance_matrix,n);
+
+	//keep count of nodes
+	int node=n;
+
+	//the root
+	Graph_Node* tree= new Graph_Node(-1);
+	
+	//the vector of net divergences
+	float* r= (float*)malloc(sizeof(float)*n);
+	//vector of convertion between the graph node id and the index in the matrix of differences
+	float* index_to_id= (float*)malloc(sizeof(float)*n);
+	//vector of convertion between the index used now in the distance matrix and the index used in the last iteraction
+	float* index_to_last_index= (float*)malloc(sizeof(float)*n);
+
+	//create a star tree;
+	for(i=0;i<n;i++)
+	{
+		Graph_Node* new_node= new Graph_Node(i);
+		index_to_id[i]=i;
+
+		tree->insertConnection(new_node);
+	}
+
+		
+	//repeat the steps, till we have no nodes to group
+	for(;n>2;)
+	{
+		//calculate the net divergence for each variable
+		for(i=0;i<n;i++)
+		{
+			r[i]=0.0f;
+
+			//sum only the distances below the main diagonal in the matrix
+			//The @ are the numbers that would be summed in the example:
+			//[ x      ]		
+			//[ @ x	   ]
+			//[ @ @ x  ]
+			//[ @ @ @ x]
+			for(j=i+1;j<n;j++)
+			{
+				r[i]+= distance_matrix[j][i];
+			}
+			
+			for(j=0;j<i;j++)
+			{
+				r[i]+= distance_matrix[i][j];
+			}
+
+		}
+
+
+
+		//calculate new distance matrix M() using a metric
+		for(i=0;i<n;i++)
+		{
+			//calculate only in the spaces above the main diagonal in the matrix, that are not used elsewhere
+			//The @ are the numbers that would be used in the example:
+			//[ x @ @ @ ]		
+			//[   x	@ @ ]
+			//[     x @ ]
+			//[       x ]
+			
+			for(j=0;j<i;j++)
+			{
+				distance_matrix[j][i]= distance_matrix[i][j] - (r[i]+r[j])/(n-2);
+			}
+		}
+
+		//printMatrix(distance_matrix, n);
+
+
+		float M_minimum= distance_matrix[0][1];
+		int node_index_a=0;
+		int node_index_b=1;
+		float distance_ab= distance_matrix[1][0];
+		
+
+		//find the two nodes with smallest M()
+		for(i=0;i<n;i++)
+		{
+
+			//The @ are the numbers that would be accessed in the example:
+			//[ x @ @ @ ]		
+			//[   x	@ @ ]
+			//[     x @ ]
+			//[       x ]
+			
+			for(j=0;j<i;j++)
+			{
+				if(distance_matrix[j][i]<M_minimum)
+				{
+					M_minimum= distance_matrix[j][i];
+					node_index_a= i;
+					node_index_b= j;
+					distance_ab= distance_matrix[i][j];
+				}
+					
+			}
+		}
+
+		
+		//creating new node and inserting it
+		Graph_Node* tmp_node= new Graph_Node(node);
+		node++;
+		Graph_Node* tmp_node_a= tree->removeConnectionWithId(index_to_id[node_index_a]);
+		Graph_Node* tmp_node_b= tree->removeConnectionWithId(index_to_id[node_index_b]);
+
+		//calculate the edge weights (also called branch length)
+		float connection_weight_a= distance_ab/2 + (r[node_index_a]-r[node_index_b])/(2*(n-2)) ;
+		float connection_weight_b= distance_ab - connection_weight_a;
+
+		//printf("%f %f\n",connection_weight_a, connection_weight_b);
+		
+		tmp_node->insertConnection(tmp_node_a, connection_weight_a);
+		tmp_node->insertConnection(tmp_node_b, connection_weight_b);
+		tree->insertConnection(tmp_node);
+
+		//copying old distances to another place
+		for(i=0;i<n;i++)
+		{
+			for(j=0;j<i;j++)
+			{
+				distance_matrix[j][i]= distance_matrix[i][j];
+			}
+
+			//save a temporary map from indexes to graph's ids in the unused diagonal of the matrix
+			distance_matrix[i][i]=index_to_id[i];
+
+		}
+		
+		//built the new map from indexes to graph's ids and set the diagonal of the matrix as map from the new indexes to the last
+		index_to_id[0]= node -1;
+		j=1;
+		for(i=0;i<n;i++)
+		{
+			if(i!=node_index_a&&i!=node_index_b)
+			{
+				index_to_id[j]= distance_matrix[i][i];
+				index_to_last_index[j]=i;
+				j++;
+			}
+		}
+
+		
+		//creating new distances from the new node to the other nodes and decrease the number of nodes N
+		n--;
+		
+		for(i=1;i<n;i++)
+		{
+			distance_matrix[i][0]= (oldDistance(node_index_a, index_to_last_index[i], distance_matrix) + oldDistance(node_index_b, index_to_last_index[i], distance_matrix) - distance_ab)/2;
+		
+		}
+
+		for(i=1;i<n;i++)
+		{
+			for(j=1;j<i;j++)
+			{
+				distance_matrix[i][j]= oldDistance(index_to_last_index[i],index_to_last_index[j], distance_matrix);
+			}
+		}
+
+		//printMatrix(distance_matrix,n);
+
+	}
+
+	//for n = 2, there are 2 nodes and 1 distance, so a root between both nodes is created 
+	//and this distance is put in the weight of one of the edges, 
+	//the other receives 0 as an edge's weight. 
+	//(The important point is that the sum of both edges are equal to the distance in the matrix.)
+	if(n==2)
+	{
+		//since the unique nodes available are two, their indexes in the matrix are:
+		int node_index_a=0;
+		int node_index_b=1;
+
+		//creating new node and inserting it
+		Graph_Node* tmp_node= new Graph_Node(node);
+		node++;
+		Graph_Node* tmp_node_a= tree->removeConnectionWithId(index_to_id[node_index_a]);
+		Graph_Node* tmp_node_b= tree->removeConnectionWithId(index_to_id[node_index_b]);
+
+		//calculate the edge weights (also called branch length)
+		float connection_weight_a= distance_matrix[1][0];
+		float connection_weight_b= 0;
+
+		tmp_node->insertConnection(tmp_node_a, connection_weight_a);
+		tmp_node->insertConnection(tmp_node_b, connection_weight_b);
+		tree->insertConnection(tmp_node);
+		
+	}
+
+	Graph_Node* new_root= tree->connection[0];
+	delete tree;
+	
+	free(r);
+	free(index_to_id);
+	free(index_to_last_index);
+	
+	return new_root;
+}
+
+Graph_Node* neighborJoining(float** distance_matrix, int n, int* node_to_cut, int neighbor_joining_metric, float** beta_array, int* beta_size)
+{
+	int i,j;
+		
+	//printMatrix(distance_matrix,n);
+
+	//keep count of nodes
+	int node=n;
+
+	//the size of the beta array is equal to the number of non-leaf nodes in a tree
+	*beta_size= n -1;
+	(*beta_array)=(float*)malloc(sizeof(float)* (*beta_size));
+	int alpha_size= n-1;
+	float * (alpha_array)=(float*)malloc(sizeof(float)* (alpha_size));
+	float * (gama_array)=(float*)malloc(sizeof(float)* (alpha_size));
+
+
+	//the root
+	Graph_Node* tree= new Graph_Node(-1);
+	
+	//the vector of net divergences
+	float* r= (float*)malloc(sizeof(float)*n);
+	//vector of convertion between the graph node id and the index in the matrix of differences
+	float* index_to_id= (float*)malloc(sizeof(float)*n);
+	//vector of convertion between the index used now in the distance matrix and the index used in the last iteraction
+	float* index_to_last_index= (float*)malloc(sizeof(float)*n);
+
+	//create a star tree;
+	for(i=0;i<n;i++)
+	{
+		Graph_Node* new_node= new Graph_Node(i);
+		index_to_id[i]=i;
+
+		tree->insertConnection(new_node);
+	}
+
+	float last_minimum_distance=0;
+	float last_avg=0;
+	float last_difference=0;
+	float r_avg;
+	float last_r=0;
+	float diff_diff;
+	
+	float max_difference=-1;
+	int node_before=-1;
+	int cut_node=-1;
+	
+#ifdef	PRINT_NJ_INFO		
+	float real_diff_avg=0;
+	float real_diff_count=0;
+
+	float last_norm_min=0;
+	float last_norm_avg=0;
+		
+	//maximum difference between subsequent nodes of the difference between minimum and average distance
+	float max_m=-1;
+	float max_m2=-1;
+	float max_avg=-1;
+
+		
+	
+	printf("r_avg \t");
+	printf("minimum distance \t");
+	printf("avg distance \t");
+	printf("(avg-min_dist) \t");
+		
+	printf("minimum distance diff \t");
+	//printf("avg diff \t");
+	//printf("avg diff/avg \t");
+	printf("Neighbor J. metric\t");
+	printf("node\n");
+
+#endif
+
+	int count=0;
+
+	//repeat the steps, till we have no nodes to group
+	for(;n>2;)
+	{
+		r_avg=0;
+		//calculate the net divergence for each variable
+		for(i=0;i<n;i++)
+		{
+			r[i]=0.0f;
+
+			//sum only the distances below the main diagonal in the matrix
+			//The @ are the numbers that would be summed in the example:
+			//[ x      ]		
+			//[ @ x	   ]
+			//[ @ @ x  ]
+			//[ @ @ @ x]
+			for(j=i+1;j<n;j++)
+			{
+				r[i]+= distance_matrix[j][i];
+			}
+			
+			for(j=0;j<i;j++)
+			{
+				r[i]+= distance_matrix[i][j];
+			}
+
+			r_avg+=r[i];
+		}
+
+		r_avg= r_avg/n;
+
+
+		//calculate new distance matrix M() using a metric
+		for(i=0;i<n;i++)
+		{
+			//calculate only in the spaces above the main diagonal in the matrix, that are not used elsewhere
+			//The @ are the numbers that would be used in the example:
+			//[ x @ @ @ ]		
+			//[   x	@ @ ]
+			//[     x @ ]
+			//[       x ]
+			
+			for(j=0;j<i;j++)
+			{
+				distance_matrix[j][i]= distance_matrix[i][j] - (r[i]+r[j])/(n-2);
+			}
+		}
+
+		//printMatrix(distance_matrix, n);
+
+
+		float M_minimum= distance_matrix[0][1];
+		int node_index_a=0;
+		int node_index_b=1;
+		float distance_ab= distance_matrix[1][0];
+		float avg_distance= 0.0;
+		int counter=0;
+		
+
+		//find the two nodes with smallest M()
+		for(i=0;i<n;i++)
+		{
+
+			//The @ are the numbers that would be accessed in the example:
+			//[ x @ @ @ ]		
+			//[   x	@ @ ]
+			//[     x @ ]
+			//[       x ]
+			
+			for(j=0;j<i;j++)
+			{
+				if(distance_matrix[j][i]<M_minimum)
+				{
+					M_minimum= distance_matrix[j][i];
+					node_index_a= i;
+					node_index_b= j;
+					distance_ab= distance_matrix[i][j];
+				}
+					
+				avg_distance+= distance_matrix[j][i];
+				counter++;
+			}
+		}
+
+		avg_distance= avg_distance/counter;
+
+		/*
+		printf("r avg %f\n",r_avg);
+		printf("minimum distance %f\n",M_minimum);
+		printf("minimum avg %f\n",avg_distance);
+		printf("difference %f\n", avg_distance - M_minimum);
+		
+		printf("minimum distance diff %f\n", M_minimum - last_minimum_distance);
+		printf("avg diff %f\n", avg_distance - last_avg);
+		last_avg= avg_distance;
+		last_minimum_distance= M_minimum;
+		
+		printf("node: %d\n",node);
+		*/
+		
+#ifdef	PRINT_NJ_INFO		
+		
+		printf("%.2f\t",r_avg);
+		printf("%.2f\t",M_minimum);
+		printf("%.2f\t",avg_distance);
+		printf("%f\t", avg_distance - M_minimum);
+		
+		printf("%f\t", M_minimum - last_minimum_distance);
+#endif
+		//printf("%f\t", avg_distance - last_avg);
+		//printf("%f\t", (avg_distance - last_avg)/avg_distance);
+		
+		//float difference= last_avg - last_minimum_distance - (avg_distance - M_minimum);
+		
+		//float difference= fabs((avg_distance - last_avg)/avg_distance);
+
+		float difference;
+		
+		//printf("%f\t", difference);
+		//printf("%f\t", difference);
+		
+		//last_avg= avg_distance;
+		//last_minimum_distance= M_minimum;
+		
+		//float difference= last_avg - last_minimum_distance - (avg_distance - M_minimum);
+		//float difference= M_minimum - last_minimum_distance;
+
+		switch(neighbor_joining_metric)
+		{
+			//Danilo's metric
+			case 0:
+			{
+				
+#ifdef	PRINT_NJ_INFO		
+				difference = ((last_r - (r_avg)) *  (last_r - (r_avg)))/(last_r);
+				printf("%.2f\t", difference);
+				difference = ((last_r - (r_avg)))/(last_r);
+				printf("%.2f\t", difference);
+
+				difference = (last_minimum_distance - M_minimum)/(M_minimum);
+				//8
+				printf("%.2f\t", difference);
+				
+				difference = (last_avg - last_minimum_distance - (avg_distance - M_minimum))/(avg_distance - M_minimum);
+				printf("%.2f\t", difference);
+				float diff_norm_min = fabs((last_minimum_distance - M_minimum)/(M_minimum) - last_norm_min);
+				printf("%.2f\t", fabs(diff_norm_min));
+				
+				last_norm_min = difference;
+				
+				float diff_norm_avg_2 = fabs((last_avg - avg_distance)/(avg_distance) - last_norm_avg);
+				printf("%.2f\t", fabs(diff_norm_avg_2));
+
+				last_norm_avg = diff_norm_avg_2;
+				difference = (last_avg - avg_distance);
+				//12
+				printf("%.2f\t", difference);
+				
+				real_diff_avg+= avg_distance;
+				real_diff_count++;
+				
+				float diff_norm_avg = (last_avg - avg_distance)/(avg_distance);
+
+				printf("%.2f\t", diff_norm_avg);
+				int count=0;
+				if(diff_norm_avg > max_avg && n != 3 )
+				{
+					count++;
+				}
+#endif
+				
+				//difference = ((last_avg - last_minimum_distance - (avg_distance - M_minimum))/(avg_distance - M_minimum));// * diff_norm_min;
+				difference = (( avg_distance - M_minimum - (last_avg - last_minimum_distance) )/(avg_distance - M_minimum));// * diff_norm_min;
+				
+				//diff_diff= difference - last_difference;
+				diff_diff= fabs(difference) ;
+				
+				//printf("%.2f\t", difference);
+
+#ifdef	PRINT_NJ_INFO		
+				printf("%.2f\t", diff_diff);
+				
+				printf("%f\t", diff_diff);
+				printf("%d\n",node);
+
+#endif				
+
+				
+				if(diff_diff > max_difference)
+				{
+					node_before= node;
+					max_difference= diff_diff;
+				}
+				
+				//store value in the beta_array
+				(alpha_array)[count]=diff_diff;
+			
+				//consider only numbers 2 significative digits (otherwise we would be taking into account errors and replicating them)
+				//specially in the case where such small numbers are very important, for example in the last internal nodes.
+				float trunc_diff= truncf(diff_diff*100);
+				if(trunc_diff==INFINITY||trunc_diff==NAN)
+				{
+					trunc_diff=0;
+				}
+				(*beta_array)[count]= ((trunc((avg_distance - M_minimum)*100)*trunc_diff)*trunc_diff)/1000000;
+				
+				gama_array[count]= (avg_distance - M_minimum);
+				//alpha_array[count]= (avg_distance - M_minimum);//*diff_diff*diff_diff;
+				//alpha_array[count]= (( avg_distance - M_minimum - (last_avg - last_minimum_distance) ));
+						//*diff_diff * (avg_distance - M_minimum) );// * diff_norm_min;
+
+
+		//		printf("%d\t%.2f\t%.2f\n",node, alpha_array[count], ((trunc((avg_distance - M_minimum)*100)*trunc_diff)*trunc_diff)/1000000);
+				//printf("%.2f\t%.2f\n", alpha_array[count], *(beta_array)[count]);
+				
+				count++;
+
+				//if(count>=3)
+				if((fabs(diff_diff) < fabs(max_difference))&& (node_before != -1))
+				{
+					//max_m= M_minimum;
+					//max_m2= M_minimum - last_minimum_distance;
+					//max_avg= diff_norm_avg; //(last_avg - avg_distance)/(avg_distance);
+					//max_m= diff_norm_min; //(last_avg - avg_distance)/(avg_distance);
+					cut_node= node_before;
+					//printf("y%d\n", node);
+					node_before= -1;
+				}
+			}
+			break;
+
+			//Alexandre's metric
+			case 1:
+				difference= fabs((avg_distance - last_avg)/avg_distance);
+
+				//n equal a 3 is the trivial BB with all variables in one block
+				if(difference > max_difference && n != 3 )
+				{
+					max_difference= difference;
+					cut_node= node;
+				}
+				break;
+
+			//not normalized
+			case 2:
+				difference= last_avg - last_minimum_distance - (avg_distance - M_minimum);
+	
+				//n equal a 3 is the trivial BB with all variables in one block
+				if(difference > max_difference && n!=3)
+				{
+					max_difference= difference;
+					cut_node= node;
+				}
+				break;
+			
+			//R metric
+			case 3:
+				difference = (last_avg - last_minimum_distance - (avg_distance - M_minimum))/(avg_distance - M_minimum);
+				printf("%.2f\t", difference);
+				
+				difference= fabs((M_minimum - last_minimum_distance)/M_minimum);
+				printf("b %.2f\t", difference);
+
+				
+				difference = (last_avg - last_minimum_distance - (avg_distance - M_minimum))/(avg_distance - M_minimum);
+			//	
+				//printf("%.2f\t", difference);
+				
+				difference= last_avg - last_minimum_distance - (avg_distance - M_minimum);
+				
+				printf("aaa  %.2f\t", difference);
+
+				difference = ((last_r - (r_avg)) *  (last_r - (r_avg)))/(last_r);
+				float difference2 = difference;
+			//	
+				printf("%.2f\t", difference);
+				
+				difference= last_avg - last_minimum_distance - (avg_distance - M_minimum);
+				
+				printf("%.2f\t", difference);
+				printf("%.2f\t", difference2);
+	
+				//diff_diff= last_difference - difference;
+				diff_diff= fabs(difference * difference2);
+				
+				//printf("%.2f\t", diff_diff);
+
+				//difference = (last_avg + last_minimum_distance - (avg_distance + M_minimum))/(avg_distance + M_minimum);
+				//difference = (last_minimum_distance - (M_minimum))/(M_minimum);
+
+				//when i == n-1 the difference while trying to normalize itself
+				//will end up dividing by zero or by a very small number.
+				//This results from the trivial solution that the best BB is the one having all variables together
+				if(diff_diff > max_difference && n != 3 )
+				{
+					max_difference= diff_diff;
+					cut_node= node;
+				}
+				break;
+
+
+		}
+		
+
+		last_avg= avg_distance;
+		last_minimum_distance= M_minimum;
+		last_difference= difference;
+		last_r= r_avg;
+
+		//creating new node and inserting it
+		Graph_Node* tmp_node= new Graph_Node(node);
+		node++;
+		Graph_Node* tmp_node_a= tree->removeConnectionWithId(index_to_id[node_index_a]);
+		Graph_Node* tmp_node_b= tree->removeConnectionWithId(index_to_id[node_index_b]);
+
+		//calculate the edge weights (also called branch length)
+		float connection_weight_a= distance_ab/2 + (r[node_index_a]-r[node_index_b])/(2*(n-2)) ;
+		float connection_weight_b= distance_ab - connection_weight_a;
+
+		//printf("%f %f\n",connection_weight_a, connection_weight_b);
+		
+		tmp_node->insertConnection(tmp_node_a, connection_weight_a);
+		tmp_node->insertConnection(tmp_node_b, connection_weight_b);
+		tree->insertConnection(tmp_node);
+
+		//copying old distances to another place
+		for(i=0;i<n;i++)
+		{
+			for(j=0;j<i;j++)
+			{
+				distance_matrix[j][i]= distance_matrix[i][j];
+			}
+
+			//save a temporary map from indexes to graph's ids in the unused diagonal of the matrix
+			distance_matrix[i][i]=index_to_id[i];
+
+		}
+		
+		//built the new map from indexes to graph's ids and set the diagonal of the matrix as map from the new indexes to the last
+		index_to_id[0]= node -1;
+		j=1;
+		for(i=0;i<n;i++)
+		{
+			if(i!=node_index_a&&i!=node_index_b)
+			{
+				index_to_id[j]= distance_matrix[i][i];
+				index_to_last_index[j]=i;
+				j++;
+			}
+		}
+
+		
+		//creating new distances from the new node to the other nodes and decrease the number of nodes N
+		n--;
+		
+		for(i=1;i<n;i++)
+		{
+			distance_matrix[i][0]= (oldDistance(node_index_a, index_to_last_index[i], distance_matrix) + oldDistance(node_index_b, index_to_last_index[i], distance_matrix) - distance_ab)/2;
+		
+		}
+
+		for(i=1;i<n;i++)
+		{
+			for(j=1;j<i;j++)
+			{
+				distance_matrix[i][j]= oldDistance(index_to_last_index[i],index_to_last_index[j], distance_matrix);
+			}
+		}
+
+		//printMatrix(distance_matrix,n);
+
+	}
+
+	(*beta_size)= count;
+
+	//for n = 2, there are 2 nodes and 1 distance, so a root between both nodes is created 
+	//and this distance is put in the weight of one of the edges, 
+	//the other receives 0 as an edge's weight. 
+	//(The important point is that the sum of both edges are equal to the distance in the matrix.)
+	if(n==2)
+	{
+		//since the unique nodes available are two, their indexes in the matrix are:
+		int node_index_a=0;
+		int node_index_b=1;
+
+		//creating new node and inserting it
+		Graph_Node* tmp_node= new Graph_Node(node);
+		node++;
+		Graph_Node* tmp_node_a= tree->removeConnectionWithId(index_to_id[node_index_a]);
+		Graph_Node* tmp_node_b= tree->removeConnectionWithId(index_to_id[node_index_b]);
+
+		//calculate the edge weights (also called branch length)
+		float connection_weight_a= distance_matrix[1][0];
+		float connection_weight_b= 0;
+
+		tmp_node->insertConnection(tmp_node_a, connection_weight_a);
+		tmp_node->insertConnection(tmp_node_b, connection_weight_b);
+		tree->insertConnection(tmp_node);
+		
+	}
+
+	Graph_Node* new_root= tree->connection[0];
+	delete tree;
+	
+	free(r);
+	free(index_to_id);
+	free(index_to_last_index);
+
+	printf("cut nodes >= %d\n",cut_node);
+	
+	if(node_to_cut!=NULL)
+	{
+		*node_to_cut= cut_node;
+	}
+
+	printArray( *beta_array, *beta_size+1);
+	printArray(gama_array, *beta_size+1);
+	printArray(alpha_array, *beta_size+1);
+
+	free(alpha_array);
+	free(gama_array);
+
+	return new_root;
+}
+
+float oldDistance(int a, int b, float** matrix)
+{
+	if(a>b)
+	{
+		return matrix[b][a];
+	}
+	else
+	{
+		return matrix[a][b];
+
+	}
+}
+
+
+void returnMaximumMinimumWeights(float* maximum, float* minimum, Graph_Node* root)
+{
+	if(root==NULL)
+	{
+		printf("ERROR: NUll tree passed to returnMaximumMinimumWeights\n");
+		exit(1);
+	}
+	
+	//set the default minimum and maximum
+	if(root->connection_number>0)
+	{
+		*maximum= root->connection_weight[0];
+		*minimum= root->connection_weight[0];
+	}
+	else
+	{
+		printf("ERROR: Trying to return maximum minimum weights in a graph with nodes<=1\n");
+		return;
+	}
+
+	recursiveMaximumMinimumWeights(maximum, minimum, root);
+}
+
+
+void recursiveMaximumMinimumWeights(float* maximum, float* minimum, Graph_Node* root)
+{
+	int i;
+
+	for(i=0;i<root->connection_number;i++)
+	{
+		if(*maximum < root->connection_weight[i])
+		{
+			*maximum= root->connection_weight[i];
+		}
+
+		if(*minimum > root->connection_weight[i])
+		{
+			*minimum= root->connection_weight[i];
+		}
+
+		recursiveMaximumMinimumWeights(maximum, minimum, root->connection[i]);
+	}
+}
+
+void returnMaximumMinimumLeafWeights(float* maximum, float* minimum, Graph_Node* root)
+{
+	bool is_first_weight=true;
+
+	//*minimum=0;
+	
+	if(root==NULL)
+	{
+		printf("ERROR: NUll tree passed to returnMaximumMinimumLeafWeights\n");
+		exit(1);
+	}
+
+	recursiveMaximumMinimumLeafWeights(maximum, minimum, root, &is_first_weight);
+	
+}
+
+void recursiveMaximumMinimumLeafWeights(float* maximum, float* minimum, Graph_Node* root, bool* is_first_weight)
+{
+	int i;
+
+	for(i=0;i<root->connection_number;i++)
+	{
+	
+		//check if it is a leaf node
+		if((root->connection[i])->connection_number==0)
+		{
+			//printf("before maximum %f minimum %f\n",*maximum, *minimum);
+			
+			//if it is the first leaf node just set the maximum minimum without any comparison
+			if(*is_first_weight)
+			{
+				*maximum= root->connection_weight[i];
+				*minimum= root->connection_weight[i];
+				*is_first_weight=false;
+			}
+			else
+			{
+				if(*maximum < root->connection_weight[i])
+				{
+					*maximum= root->connection_weight[i];
+				}
+
+				if(*minimum > root->connection_weight[i])
+				{
+					*minimum= root->connection_weight[i];
+				}
+			}
+			//(*minimum)++;
+		
+			//printf("conn %f\n",root->connection_weight[i]);
+			//printf("after maximum %f minimum %f\n",*maximum, *minimum);
+		}
+		
+		recursiveMaximumMinimumLeafWeights(maximum, minimum, root->connection[i], is_first_weight);
+		
+
+	}
+}
+
+//recursively normalize the leaf nodes
+void normalizeLeafNodes(float minimum, Graph_Node* tree, float* tree_maximum, float* tree_minimum)
+{
+	
+	if(tree==NULL)
+	{
+		printf("ERROR: NUll tree passed to normalizeLeafNodes\n");
+		exit(1);
+	}
+	
+	//set the default minimum and maximum
+	if(tree->connection_number>0)
+	{
+		*tree_maximum= tree->connection_weight[0];
+		*tree_minimum= tree->connection_weight[0];
+	}
+	else
+	{
+		printf("ERROR: Trying to return maximum minimum weights in a graph with nodes<=1\n");
+		return;
+	}
+
+	recursiveNormalizeLeafNodes(minimum, tree, tree_maximum, tree_minimum);
+}
+
+void recursiveNormalizeLeafNodes(float minimum, Graph_Node* tree, float* tree_maximum, float* tree_minimum)
+{
+	int i;
+
+	for(i=0;i<tree->connection_number;i++)
+	{
+	
+		//check if it is a leaf node
+		if((tree->connection[i])->connection_number==0)
+		{
+			tree->connection_weight[i]-= minimum;
+		}
+			
+		if(*tree_maximum < tree->connection_weight[i])
+		{
+			*tree_maximum= tree->connection_weight[i];
+		}
+
+		if(*tree_minimum > tree->connection_weight[i])
+		{
+			*tree_minimum= tree->connection_weight[i];
+		}
+		
+		recursiveNormalizeLeafNodes(minimum, tree->connection[i], tree_maximum, tree_minimum);
+
+	}
+}

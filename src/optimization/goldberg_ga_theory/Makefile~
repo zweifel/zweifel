@@ -1,0 +1,2 @@
+all:
+	g++ -Wall -g -o o main.cpp Goldberg_GA.cpp random.cpp Ripple.cpp

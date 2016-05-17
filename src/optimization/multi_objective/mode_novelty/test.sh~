@@ -1,0 +1,5 @@
+#!/bin/bash
+
+type=wfg1_
+
+cp 10000_solutions 

@@ -1,0 +1,81 @@
+	-----------	 zweifel library      --------------
+
+useful library	
+		
+	link:
+		-lzuseful
+
+	include:
+		#include"useful/useful_utils.h"
+			-for printing on the screen.
+		#include"useful/useful_plots.h"
+			-for plotting with R;
+		#include"useful/read_csv.h"
+			-for reading and writing csv files;
+
+	need linkage:
+		
+		#include"useful/"
+		#include"useful/read_arff.h"
+			-for reading ARFF files;
+
+
+random library
+	-interface for various random generators: (State of Art, Boost Random, Standard Random)
+
+	link: 
+		-lzrandom
+
+	include: 
+		#include"random/Random.h"
+		#include"random/State_of_Art_Random.h"
+			-interface to the state of art algorithms in randomness (coded for efficiency and accuracy).
+		#include"random/Boost_Random.cpp"
+			-interface to the Boost Random (coded for extensibility and accuracy).
+		#include"random/Standard_Random.cpp"
+			-interface to the Standard random() function. 
+
+
+graph library
+	-graph utilities in a generic class
+
+	link: 
+		-lzgraph
+
+	include: 
+		#include"graph/Graph_Node.h"
+
+
+dynamics library
+	-various maps and neuron models for studies in neuroscience and chaos
+
+	link: 
+		-lzdynamics
+
+	include: 
+		#include"dynamics/all_dynamics.h"
+			-to include all maps and neuron models;
+
+optimization library
+	-optimization interfaces and optimization algorithms
+
+	link: 
+		-lzoptimization
+
+	include: 
+		#include"optimization/Optimization_Problem.h"
+			-interface to any optimization problem;
+		#include"optimization/Optimization_Method.h"
+			-interface to any optimization algorithm;
+		#include"optimization/differential_evolution/Differential_Evolution.h"
+			-to use differential evolution algorithm;
+
+modelling library
+	-model interfaces and modelling algorithms (neural networks)
+
+	link: 
+		-lzmodel
+
+	include: 
+		#include"modelling/Model.h"
+			-interface to any modelling algorithm;
