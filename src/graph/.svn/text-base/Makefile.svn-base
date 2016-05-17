@@ -1,0 +1,7 @@
+
+CFLAGS= -I../useful/
+
+all:
+	#g++ -Wall -g -o o Graph_Node.cpp main.cpp
+	g++ -Wall -g -o o ${CFLAGS} Graph_Node.cpp neighbor_joining.cpp main.cpp ../useful/useful_utils.h
+	#g++ -Wall -ansi -pg -g -o o ecga.cpp main.cpp

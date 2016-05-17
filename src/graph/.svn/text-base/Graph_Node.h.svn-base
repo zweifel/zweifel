@@ -1,0 +1,61 @@
+
+#ifndef GRAPH_NODE
+#define GRAPH_NODE
+
+#include"stdlib.h"
+#include"stdio.h"
+#include<queue>
+
+#ifdef NOPRINTF
+
+#define printf(x...)
+
+#endif
+
+using namespace std;
+
+#define ALLOCATION_STEP 5
+
+class Graph_Node
+{
+
+
+	bool token;	//used to mark those nodes of the graph already printed
+
+	static FILE* fp;  	//used to print a log
+	static queue<Graph_Node*> print_queue;
+
+	inline void inlineRemoveConnectionWithIndex(int index);
+	void recursivelyPrint();
+	void recursivelyFillLeafIds(int* leaf_array, int * counter);
+
+public:
+
+	Graph_Node(float id);
+	~Graph_Node();
+	
+	float id;	
+	Graph_Node** connection;
+	float* connection_weight;
+	
+	int connection_number;	
+	int connection_allocated;	//number allocated in the array of connections, it stores ALLOCATION_STEP more edges than it need to every time it reallocs
+
+	void insertConnection(Graph_Node* node, float weight=0.0f);
+	void removeAnyConnectionWithNode(Graph_Node* node);
+	Graph_Node* removeConnectionWithIndex(int index);	//remove a connection in a respective index of the vector of connections
+	Graph_Node* removeConnectionWithId(int id);		//return the removed connection
+	int numberOfLeafNodes();
+	int* arrayOfLeafIds(int* array_size);
+	int treeHeight();
+
+	void print(char* filename);
+	void print();
+
+	//functions that only work for trees
+	void deleteTree();
+
+};
+
+
+#endif

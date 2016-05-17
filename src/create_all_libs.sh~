@@ -1,0 +1,15 @@
+#!/bin/bash
+
+for i in `find -maxdepth 1 -type d`
+do
+	if [ $i = "." ]
+	then
+		echo "."
+	else
+		cd $i
+		pwd
+		./create_lib.sh
+		cd ..
+	fi
+done
+

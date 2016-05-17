@@ -1,0 +1,7 @@
+
+
+#include"stdlib.h"
+#include"stdlio.h"
+#include"math.h"
+
+float entropy(int *variable, int variable_size, int** sample, int sample_size);

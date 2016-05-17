@@ -1,0 +1,28 @@
+#CC= g++ -Wall -msse2 -O3
+
+#Objects =       random.o \
+		Boost_Random.o \
+		Standard_Random.o \
+		dSFMT/dSMT.o \
+		State_of_Art_Random.o
+
+
+all:
+	g++ -msse2 -Wall -O3 -c random_test.cpp random.cpp Boost_Random.cpp Standard_Random.cpp State_of_Art_Random.cpp Random.cpp dSFMT/dSFMT.c -DDSFMT_MEXP=19937
+	#g++ -o o random_test.cpp -lzrandom
+
+clean:
+	@echo Cleaning up...
+	@echo Removing all Object Files... ; find . -name '*.o' -exec echo deleting {} \; -exec rm {} \;
+	@echo Removing all Linux Temporary Files...; find . -name '*~' -exec echo deleting {} \; -exec rm {} \;
+	@echo Done.
+#        @echo Removing Executable...; rm $(Executable) -f 
+	
+
+#        $(CC) $(Objects) -o $(Executable) $(Libraries) $(Includes) $(Links)
+
+
+#%.o : %.cpp
+#	        @echo Compiling $< ...;$(CC) $(CPPFLAGS) $(Includes) -c $<
+
+
