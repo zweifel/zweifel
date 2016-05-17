@@ -1,0 +1,482 @@
+/* Chaining_Hash -- Chaining hash table template. With a string as a key and a Tvalue as value and is indexed by unsigned long int.
+ *
+ * Dependencies: 
+ *
+ * Wizards of the Blizzard
+ * Copyright (c) 2009 Danilo Vasconcellos Vargas
+ */
+
+#ifndef CHAINING_HASH_H	
+#define CHAINING_HASH_H
+
+#include"common.h"
+#include"stdlib.h"
+#include"stdio.h"
+#include<boost/filesystem/operations.hpp>
+#define KEY_SIZE 64
+#include"string.h"
+
+using namespace boost::filesystem;
+
+template <class Tvalue>
+struct _entry
+{
+	unsigned int counter;
+	char key[KEY_SIZE];
+	Tvalue value;
+	_entry<Tvalue>* next;
+};
+
+
+template <class Tvalue>
+class Chaining_Hash
+{
+	typedef struct _entry<Tvalue> entry;
+
+	public:
+		Chaining_Hash(int size);
+		//It will have the size of the number of archives present in the directory passed
+		Chaining_Hash(const char* directory);
+		~Chaining_Hash();
+
+		//API
+		inline Tvalue get(const char* key);
+                inline Tvalue tryFastInsertion(const char* key, bool* valid);	
+		inline void insert(const char* key, Tvalue value);
+		inline void lightRemove(const char* key);
+		//inline void remove(long int index);
+		Tvalue* clean(int* number);
+		
+		//prepare hash 
+		inline int computeMinimumTableSize(const char *directory);
+		int recursiveCountFiles(const char* directory);
+	
+		inline void deleteLinkedList(entry* linked_list);
+
+		//core functionality variables and functions
+		inline unsigned long int hashFunction(const char* key);
+		entry** table;
+		int size;
+
+
+		//debug
+		void print();
+
+};
+
+
+template <class Tvalue>
+Chaining_Hash<Tvalue>::Chaining_Hash(int size)
+{
+#ifdef DEBUG_MODE
+    printf("Using Chaining Hash...\n");                                                      
+#endif
+	//initialize the counters and the value table
+	table= ( entry** )calloc(size, sizeof(entry*));
+	this->size= size;
+    
+}
+
+//It will have the size of the number of archives present in the directory passed
+template <class Tvalue>
+Chaining_Hash<Tvalue>::Chaining_Hash(const char* directory)
+{
+#ifdef DEBUG_MODE
+    printf("Using Chaining Hash...\n");                                                      
+#endif
+	this->size= computeMinimumTableSize(directory);
+
+	//initialize the counters and the value table
+	table= ( entry** )calloc(size, sizeof(entry*));
+	
+}
+
+template <class Tvalue>
+Chaining_Hash <Tvalue>::~Chaining_Hash()
+{
+	int i;
+	for(i=0;i<size;++i)
+	{
+		entry* tmp_entry= table[i];
+
+		deleteLinkedList(tmp_entry);
+
+		table[i]=NULL;
+	}
+
+
+	//delete table;
+	free(table);
+
+}
+
+
+template <class Tvalue>
+unsigned long int Chaining_Hash <Tvalue>::hashFunction(const char*key)	
+{
+	int c;
+	unsigned long hash=0;
+	//unsigned long hash=5381;
+
+	c = *key++;
+	//while not the '\O' character
+	while(c)
+	{
+		hash = c + (hash << 6) + (hash << 16) - hash;
+		//hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
+		c = *key++;
+	}	
+	return hash;
+                        
+}
+
+/*
+template <class Tvalue>
+void Chaining_Hash <Tvalue>::remove(long int index)	
+{
+	table[index]=0;
+	free(entry_keys[index]);	
+}*/
+
+
+
+/*******************************************************
+ *	Clean - eliminating any non used entries
+ *
+ *	returns an array of Tvalues that were removed
+ *	from the entries and its respective size in the
+ *	array_size variable.
+ * ****************************************************/
+template <class Tvalue>
+Tvalue* Chaining_Hash <Tvalue>::clean(int* array_size)	
+{
+	int delete_counter=0;
+	entry* delete_entry=NULL;
+
+	int i;
+	for(i=0;i<size;++i)
+	{
+		//go through the linked list
+		entry* tmp_entry= table[i];
+
+		//the first entry in the linked list
+		for(;tmp_entry!=NULL&&tmp_entry->counter==0;)
+		{
+			//remove the first entry
+			entry* tmp_next= tmp_entry->next;
+			tmp_entry->next=delete_entry;
+			delete_entry=tmp_entry;
+			table[i]=tmp_next;
+			delete_counter++;
+
+			tmp_entry=table[i];
+		}
+	
+		//check if it reached the end of the linked list
+		if(tmp_entry==NULL)
+			continue;
+
+		entry* last_entry= tmp_entry;
+		tmp_entry=tmp_entry->next;
+
+		//the middle and final entries in the linked list
+		for(;tmp_entry!=NULL;)
+		{
+
+			//check if nothing is using this entry
+			if(tmp_entry->counter==0)
+			{
+				//remove the entry
+				entry* tmp_next= tmp_entry->next;
+				tmp_entry->next=delete_entry;
+				delete_entry=tmp_entry;
+				last_entry->next=tmp_next;
+				delete_counter++;
+
+				//in this case the last_entry will remains the same
+				tmp_entry=tmp_next;
+			}
+			else
+			{
+				last_entry= tmp_entry;
+				tmp_entry=tmp_entry->next;
+			}
+
+		}
+	}
+		
+	//building the delete_table
+	Tvalue* delete_table= (Tvalue* )malloc(sizeof(Tvalue)*delete_counter);
+	*array_size= delete_counter;
+
+	entry* tmp_entry=delete_entry;
+	for(i=0;i<delete_counter;++i)
+	{
+		delete_table[i]= tmp_entry->value;
+		tmp_entry=tmp_entry->next;
+	}
+	
+	deleteLinkedList(delete_entry);
+
+	return delete_table;
+}
+
+
+/**********************************************
+ *	When the place of insertion has already
+ *	a value, the insertion only increases the
+ *	counter and returns the value present.
+ *	Otherwise it returns 0 and set the 
+ *	valid variable to 0;
+ * *********************************************/
+template <class Tvalue>
+Tvalue Chaining_Hash <Tvalue>::tryFastInsertion(const char* key, bool* valid)	
+{
+        unsigned int long hash= hashFunction( key);
+
+	int hash_index= hash%size;
+	
+	//try to find the key 
+	entry* tmp_entry= table[hash_index];
+	for(;tmp_entry!=NULL;tmp_entry=tmp_entry->next)
+	{
+	
+		//if the key is the same as the entry,
+		//then we found it! Return it
+		if((!strcmp(key,tmp_entry->key)))
+		{
+			tmp_entry->counter++;
+			*valid= 1;
+			return tmp_entry->value;
+		}
+
+        }	
+        
+        //if it had looped allover the table and have not find it, return 0 (not found)
+        *valid=0;
+	Tvalue return_value;
+	memset(&return_value,0,sizeof(Tvalue));
+        return return_value;
+
+}
+
+/**********************************************
+ *      Return the respective value located in
+ *  position of the hash table indexed by the 
+ *  key variable
+ *
+ *      It will not check for errors, just return 
+ *   the value
+ * *********************************************/
+template <class Tvalue>
+Tvalue Chaining_Hash <Tvalue>::get(const char* key)	
+{
+	unsigned int long hash= hashFunction( key);
+
+	int hash_index= hash%size;
+	
+	//try to find the key 
+	entry* tmp_entry= table[hash_index];
+	for(;tmp_entry!=NULL;tmp_entry=tmp_entry->next)
+	{
+	
+		//if the key is the same as the entry,
+		//then we found it! Return it
+		if((!strcmp(key,tmp_entry->key)))
+		{
+			return tmp_entry->value;
+		}
+
+        }	
+	
+	
+	printf("ERROR: No key found in Hash Table %s\n",key);
+	
+	//if the key was not found, return 0
+	Tvalue return_value;
+	memset(&return_value,0,sizeof(Tvalue));
+        return return_value;
+}
+
+/*************************************
+ *	Insert value inside the Hash
+ *
+ *	It will not check for an already
+ *	existent value equal to the inserted
+ *	The function tryFastInsertion must
+ *	always be used before this one
+ *	to check that.
+ * **********************************/
+template <class Tvalue>
+void Chaining_Hash <Tvalue>::insert(const char* key, Tvalue value)	
+{
+#ifdef DEBUG_MODE
+	if((strlen(key)+1) > KEY_SIZE)
+	{
+		printf("ERROR: Chaining Hash receiving key greater than expected. key: %s\n",key);
+		printf("key size: %d, maximum key size expected: %d\n",strlen(key)+1, KEY_SIZE);
+		exit(1);
+	}
+#endif
+
+	unsigned int long hash= hashFunction( key);
+
+	int hash_index= hash%size;
+	
+	//inserting new entry
+	entry* new_entry=(entry*)malloc(sizeof(entry));
+	new_entry->value= value;
+	new_entry->counter=1;
+	strcpy(new_entry->key,key);
+	new_entry->next=table[hash_index];
+	table[hash_index]=new_entry;
+
+#ifdef  DEBUG_MODE_2                        
+	printf("inserted %s with value %d\n",new_entry->key, new_entry->value);
+#endif
+	
+}
+
+/****************************************
+ *	Decrease Counter inside the Hash
+ *	but do not eliminate the value
+ *
+ *	The value could be deleted outside
+ *	by some function that check for 
+ *	an not null Tvalue and a 0 counter
+ * *************************************/
+template <class Tvalue>
+void Chaining_Hash <Tvalue>::lightRemove(const char* key)
+{
+	unsigned int long hash= hashFunction( key);
+
+	int hash_index= hash%size;
+	
+	//try to find the key 
+	entry* tmp_entry= table[hash_index];
+	for(;tmp_entry!=NULL;tmp_entry=tmp_entry->next)
+	{
+	
+		//if the key is the same as the entry,
+		//then we found it! Return it
+		if((!strcmp(key,tmp_entry->key)))
+		{
+                        
+			if(tmp_entry->counter<=0)
+                  	{
+                                printf("ERROR: Hash Table have negative number of entries (ignoring error to continue)\n");
+                                printf("while trying to remove key %s\n",key);
+#ifdef DEBUG_MODE
+				exit(1);
+#endif
+                        }
+			
+			tmp_entry->counter--;
+			return;
+		}
+
+        }	
+
+	printf("ERROR: Hash Table did not find the key %s, while trying to remove it\n",key);
+#ifdef DEBUG_MODE
+	exit(1);
+#endif
+
+}
+
+//delete the entire linked list
+template <class Tvalue>
+void Chaining_Hash <Tvalue>::deleteLinkedList(entry* linked_list)
+{
+	for(;linked_list!=NULL;)
+	{
+		entry* tmp_entry= linked_list;
+		linked_list= linked_list->next;
+		free(tmp_entry);
+	}
+}
+
+
+/**************************************************
+ *	Check minimum  size of the table
+ *	to have a minimum of collisions
+ * ***********************************************/
+template <class Tvalue>
+int Chaining_Hash<Tvalue>::computeMinimumTableSize(const char* directory)
+{
+       	 
+	return recursiveCountFiles(directory);
+
+}
+
+//return the number of files inside a directory, in a recursive search
+template <class Tvalue>
+int Chaining_Hash<Tvalue>::recursiveCountFiles(const char* directory)
+{
+
+	directory_iterator iter(directory), end_iter;
+	int counter=0;
+	 for(;iter!=end_iter;++iter)
+	 {
+		if(is_directory(iter->path()))
+		{
+			//if the directory did not begin with a point, count the files inside it too
+			if(strncmp(".",(iter->path().leaf()).c_str(),1)!=0)
+			{
+				counter+= recursiveCountFiles((iter->path().string()).c_str());			    
+			}
+		}
+		else
+		{
+			counter++;
+
+		}
+	}
+
+	return counter;
+}
+    
+
+
+
+/***************************************************************************
+ *	Print in the screen the hash table
+ * ************************************************************************/
+template <class Tvalue>
+void Chaining_Hash <Tvalue>::print()
+{
+	printf("Printing Chaining Hash Table:\n");	
+	
+	printf("hash table size: %d\n",size);
+	int i;
+	int counter_allocated=0;
+	int counter_using=0;
+	int counter_inconsistency=0;
+	for(i=0; i<size; ++i)
+	{
+	
+		//go through the linked list
+		entry* tmp_entry= table[i];
+
+		if(tmp_entry!=NULL)
+			printf("linked list\n");
+
+		for(;tmp_entry!=NULL;tmp_entry=tmp_entry->next)
+		{
+			printf("key %s\n",tmp_entry->key);
+			if(tmp_entry->counter>0)
+				counter_using++;
+
+			//if there is an entry, there is a value allocated
+			counter_allocated++;
+
+			if(tmp_entry->counter<0)
+				counter_inconsistency++;
+		}     
+	}
+	printf("currently allocated values: %d\n",counter_allocated);
+	printf("currently values in use: %d\n",counter_using);
+	printf("inconsistencies found: %d (counters < 0)\n",counter_inconsistency);
+}
+
+#endif

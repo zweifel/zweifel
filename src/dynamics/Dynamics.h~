@@ -1,0 +1,14 @@
+
+#ifndef DYNAMICS_H
+#define DYNAMICS_H
+
+class Dynamics
+{
+	public:
+		Dynamics();
+		~Dynamics();
+		
+		virtual double iterate(double input) = 0;	
+};
+
+#endif

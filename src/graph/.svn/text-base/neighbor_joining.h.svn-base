@@ -1,0 +1,66 @@
+
+
+#ifndef NEIGHBOR_JOINING
+#define NEIGHBOR_JOINING
+
+//#define	PRINT_NJ_INFO		
+
+#include"stdlib.h"
+#include"stdio.h"
+#include"Graph_Node.h"
+#include"useful_utils.h"
+#include"math.h"
+
+#ifdef NOPRINTF
+
+#define printf(x...)
+
+#endif
+
+/************************************************************************************************************
+ * 	distance_matrix	-  	matrix of distances between all the variables, which is of dimension (n x n)
+ * 	n 		-	number of variables
+ ***********************************************************************************************************/
+Graph_Node* neighborJoining(float** distance_matrix, int n);
+
+/************************************************************************************************************
+ * 	distance_matrix	-  	matrix of distances between all the variables, which is of dimension (n x n)
+ * 	n 		-	number of variables
+ * 	node_to_cut	-	output the number of a node, every node >= to this number should be cut to form Building Blocks
+ ***********************************************************************************************************/
+Graph_Node* neighborJoining(float** distance_matrix, int n, int* node_to_cut, int neighbor_joining_metric);
+			
+
+/************************************************************************************************************
+ * 	distance_matrix	-  	matrix of distances between all the variables, which is of dimension (n x n)
+ * 	n 		-	number of variables
+ * 	node_to_cut	-	output the number of a node, every node >= to this number should be cut to form Building Blocks
+ * 	index_to_cut	-	the respective index of the node_to_cut in the beta array
+ * 	beta		-	beta array, the array of the beta variable (unacurracy variable)
+ * 	beta_size	- 	size of the beta array
+ ***********************************************************************************************************/
+Graph_Node* neighborJoining(float** distance_matrix, int n, int* node_to_cut, int neighbor_joining_metric, float **beta, int* beta_size);
+
+
+float oldDistance(int a, int b, float** matrix);
+
+void printMatrix(float** matrix, int size);
+
+//find the minimum and maximum weights of the tree
+void returnMaximumMinimumWeights(float* maximum, float* minimum, Graph_Node* root);
+
+void recursiveMaximumMinimumWeights(float* maximum, float* minimum, Graph_Node* root);
+
+///////////////////////////////////////////////
+
+//find the maximum and minimum weights of the leaf nodes
+void returnMaximumMinimumLeafWeights(float* maximum, float* minimum, Graph_Node* root);
+
+void recursiveMaximumMinimumLeafWeights(float* maximum, float* minimum, Graph_Node* root, bool* is_first_weight);
+
+/////////////////////////////////////////////
+
+void normalizeLeafNodes(float minimum, Graph_Node* tree, float* tree_maximum, float* tree_minimum);
+void recursiveNormalizeLeafNodes(float minimum, Graph_Node* tree, float* tree_maximum, float* tree_minimum);
+
+#endif
