@@ -1,4 +1,4 @@
-# zweifel
+# :seedling: zweifel :ant:
 
 **zweifel** is a library for really wide and general purposes.
 It was built for my own personal use to avoid having to rewrite code.
