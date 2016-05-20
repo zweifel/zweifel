@@ -7,10 +7,10 @@ object_files="differential_evolution/Differential_Evolution.o \
 	Generic_Problem.o \
 	Problem_Test.o \
 	multi_objective/gde3/GDE3.o \
-	multi_objective/mode_novelty/Subpopulation_Framework.o \
-	multi_objective/mode_novelty/Novelty_Subpopulation.o \
-	multi_objective/mode_novelty/Classic_Subpopulation.o \
-	multi_objective/mode_novelty/Subpopulation.o"
+	multi_objective/subpopulation_framework/Subpopulation_Framework.o \
+	multi_objective/subpopulation_framework/Novelty_Subpopulation.o \
+	multi_objective/subpopulation_framework/Classic_Subpopulation.o \
+	multi_objective/subpopulation_framework/Subpopulation.o"
 #object_files="differential_evolution/Differential_Evolution.o goldberg_ga_theory/Goldberg_GA.o goldberg_ga_theory/random.o"
 
 tmp_destination="lib/"

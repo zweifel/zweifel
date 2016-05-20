@@ -1,7 +1,5 @@
 
-#include"Differential_Evolution.h"
-#include"../problems/Ripple.h"
-#include"common.h"
+#include"GDE3.h"
 #include"unistd.h"
 #include"random/State_of_Art_Random.h"
 #include"time.h"
@@ -15,13 +13,14 @@ int main()
 
 	double max_limit = 1;
 	double min_limit = 0;
-	int population_size= 3;
-	int subpopulation_size= 10;
-
-	int position_parameter= 4;
-	int distance_parameter= 20;
-	int problem_size= position_parameter+distance_parameter;
+	int population_size= 100;
+	//int subpopulation_size= 150;
+	
+	int position_parameter=4;
+	int distance_parameter=20;
+	//int problem_size= position_parameter + distance_parameter;
 	int number_of_problems=2;
+	//int generations= 250;
 	int generations= 25000;
 
 	double F=0.1;
@@ -30,7 +29,6 @@ int main()
 	
 	printf("number of problems %d\n", number_of_problems);
 	printf("population size %d\n",population_size);
-	printf("subpopulation size %d\n",subpopulation_size);
 	printf("max_limit %f\n",max_limit);
 	printf("min_limit %f\n",min_limit);
 	printf("F %f\n", F);
@@ -39,15 +37,14 @@ int main()
 	Random* random= new State_of_Art_Random(time(NULL));
 
 	//Optimization_Problem* problem= new Ripple(problem_size);
-	Optimization_Problem* problem= new WFG_Problem(WFG1, position_parameter, distance_parameter , number_of_problems);
+	Optimization_Problem* problem= new WFG_Problem(WFG8, position_parameter, distance_parameter, number_of_problems);
 			
 	//Optimization_Method* method2= new Differential_Evolution( 100, population_size, max_limit, min_limit, F, CR, random);
-	Differential_Evolution* method2= new Differential_Evolution( generations, population_size, subpopulation_size ,  max_limit, min_limit, F, CR, random);
+	GDE3* method2= new GDE3( generations, population_size, max_limit, min_limit, F, CR, random);
 	
 	//Optimization_Method* method;
 
 	double* solution;
-
 /*
 	double a[2];
 	//double s[]={1,1,1,1,1,1};
@@ -55,12 +52,13 @@ int main()
 	problem->objectiveFunction(s,a);
 	printf("iii  %f %f\n",a[0], a[1]);
 */				
-	printf("Result %f\n",method2->optimize(problem, number_of_problems ,&solution));
+	double result= method2->optimize(problem, number_of_problems ,&solution);
+	printf("Result %f\n", result);
 	//printf("Result %f\n",method2->optimizeDebug(problem, number_of_problems ,&solution));
 
 	//printf("Solution found:\n");
 	//printArray(solution,problem_size);
-	method2->storeSolutions("solutions");
+//   	method2->storeSolutions("solutions");
 		
 /*
 

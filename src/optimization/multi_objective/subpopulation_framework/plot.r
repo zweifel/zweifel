@@ -12,7 +12,8 @@ i <- i[,25:26]
 i <- i*-1
 
 #OFFICIAL WFG TOOLKIT
-p <- read.table("../benchmarks/wfg1_20_4")
+#p <- read.table("../benchmarks/wfg5_20_4")
+p <- read.table("/tmp/wfg8_20_4")
 #p <- read.table("../benchmarks/wfg8")
 #p <- read.table("/tmp/bbb")
 
