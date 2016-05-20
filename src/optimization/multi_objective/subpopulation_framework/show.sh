@@ -2,7 +2,7 @@
 
 R -f plot.r
 
-xv plot.png
+feh plot.png
 
 cp solutions old_solutions
 rm solutions

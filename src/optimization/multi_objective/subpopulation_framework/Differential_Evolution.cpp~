@@ -17,14 +17,17 @@ Differential_Evolution::Differential_Evolution(int max_generations, int populati
 
 	this->random=random;
 
-	tmp=(double*)malloc(sizeof(double)*population_size);
+	//tmp=(double*)malloc(sizeof(double)*population_size);
 
 
 	this->F= F;
 	this->CR= CR;
 	
 	printParameters();	
-	
+
+	new_fp2= fopen("all_evaluations","a");
+	new_fp= fopen("all_forces","a");
+
 	
 }
 
@@ -279,6 +282,18 @@ double Differential_Evolution::optimize(Optimization_Problem* optimization_probl
 
 		newGeneration();
 
+/*                if(i%100==0)
+                {
+                        char filename[64];
+                        sprintf(filename,"%d_solutions",i);
+
+                        storeSolutions(filename);
+
+                }
+
+*/
+
+
 		/*
 		if(i==5000)
 		{
@@ -291,7 +306,11 @@ double Differential_Evolution::optimize(Optimization_Problem* optimization_probl
 		*/
 		
 	}
-	
+
+	   
+	fclose(new_fp);
+	fclose(new_fp2);
+
 //	best_individual= getBestIndividual();
 //	problem->objectiveFunction(population[best_individual], &best_fitness);
 
@@ -430,6 +449,18 @@ int Differential_Evolution::newGeneration()
 		
 			//append objective to the individual
 			problem->objectiveFunction(trial_vector, (trial_vector + problem->problem_size));
+	
+			double* parent= population[i]->subpopulation[j];	
+		
+			    
+			
+			//fprintf(new_fp, "%f %f\n",trial_vector[problem->problem_size], trial_vector[problem->problem_size+1]);
+			int index= problem->problem_size;
+			if(parent[index] > -500 && trial_vector[index] > -500)
+			{
+				fprintf(new_fp, "%f %f\n",-parent[index] + trial_vector[index], -parent[index+1]+trial_vector[index+1]);
+			}
+			fprintf(new_fp2, "%f %f\n",trial_vector[problem->problem_size], trial_vector[problem->problem_size+1]);
 			
 
 			//SELECTION 

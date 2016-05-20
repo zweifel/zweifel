@@ -14,6 +14,7 @@
 //#include"Average_Subpopulation.h"
 //#include"Pareto_Subpopulation.h"
 #include"GDE3_Subpopulation.h"
+#include"Novelty_Subpopulation.h"
 
 /*
  Subpopulation Table
@@ -63,6 +64,8 @@ class Differential_Evolution: public Optimization_Method
 		double CR;
 		double S;
 		
+		FILE* new_fp;
+
 		Random* random;
 
 		Optimization_Problem* problem;

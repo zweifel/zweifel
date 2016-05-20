@@ -11,7 +11,7 @@
 #include"useful/useful_plots.h"
 #include"optimization/Optimization_Method.h"
 #include"random/Random.h"
-#include"optimization/multi_objective/multiobjective_utils.h"
+#include"multiobjective_utils.h"
 
 /*
  Subpopulation Table
@@ -49,26 +49,18 @@ class GDE3: public Optimization_Method
 		int generation;
 		int max_generations;
 
+		FILE* new_fp;
+
 		//int number_of_subpopulations; 	//equal to the number_of_"objectives" (new objectives), since each subpop has its own objective
 		int number_of_problems;
 
 		bool isNondominated(double* a, double* b);
 		int isWeakConstraintDominated(double* trial, double* parent);
-		void allocateProblemMemory();
-		void reallocateProblemMemory();
-		void freeProblemMemory();
-		int getBestIndividual(); 
-
-		bool problem_previously_defined;
-		bool keep_previous_individuals; 
 
 		int individual_size;
 		int max_population_size;
 		int population_size;
 		int current_pop_size;
-		int allocated_problem_size;
-		int last_problem_size;
-		int problem_size;
 
 		double max_limit;
 		double min_limit;
@@ -90,7 +82,6 @@ class GDE3: public Optimization_Method
 		void generateRandomIndividual();
 		double generateRandomVariable(int variable);
 		void allocatePopulations();
-		int newGeneration();
 
 		void useCrowdingdistance();
 
@@ -104,10 +95,8 @@ class GDE3: public Optimization_Method
 		void printParameters();
 		void storeSolutions(const char* filename);
 		
-
-		//API
-		
-		void keepPreviousIndividuals();
+		//int getBestIndividual();
+		int newGeneration();
 
 			
 		//implement virtual methods

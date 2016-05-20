@@ -1,6 +1,4 @@
-compile:
-	g++ -c GDE3.cpp
-
 all:
-	g++ -Wall -g -o o main.cpp Ripple.cpp Differential_Evolution.cpp -lzrandom
+	#g++ -Wall -g -o o main.cpp Ripple.cpp Differential_Evolution.cpp -lzrandom
+	g++ -Wall -g -o o main.cpp ../problems/WFG_Problem.cpp ../problems/Toolkit/* Differential_Evolution.cpp Novelty_Subpopulation.cpp Subpopulation.cpp Classic_Subpopulation.cpp Average_Subpopulation.cpp Pareto_Subpopulation.cpp -lzrandom
 

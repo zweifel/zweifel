@@ -20,46 +20,29 @@ GDE3::GDE3(int max_generations, int population_size, double max_limit, double mi
 
 	this->random=random;
 
-	tmp=(double*)malloc(sizeof(double)*max_population_size);
-	population= (double**)malloc(sizeof(double*)*max_population_size);
-	tmp_population= (double**)malloc(sizeof(double*)*max_population_size);
-	index_array= (int*)malloc(sizeof(int)*max_population_size);
-	diversity_dist= (double*)malloc(sizeof(double)*max_population_size);
+	tmp=(double*)malloc(sizeof(double)*population_size);
+
 
 	this->F= F;
 	this->CR= CR;
 	
 	printParameters();	
 
-	//if the problem size was already determined 
-	//(this is usually defined when the problem is defined)
-	problem_previously_defined=false;
-
-	//variables for continuying evolution later on
-	keep_previous_individuals=false;
-	
+	new_fp2= fopen("all_evaluations","a");	
+	new_fp= fopen("all_forces","a");	
 }
 
 GDE3::~GDE3()
 {
+
 	int i;
 
-	if(problem_previously_defined==true)
-	{
-		freeProblemMemory();
+	for(i=0;i<population_size;++i)
+	{	
+		free(population[i]);
 	}
-
 	free(population);
-	free(tmp);
-	free(tmp_population);
-	free(index_array);
-	free(diversity_dist);
 		
-}
-
-void GDE3::keepPreviousIndividuals()
-{
-	keep_previous_individuals=true;
 }
 
 void GDE3::mutationOperator(int individual)
@@ -234,35 +217,13 @@ double GDE3::optimize(Optimization_Problem* optimization_problem, int number_of_
 
 	problem= optimization_problem;
 	this->number_of_problems= number_of_problems;
-
-	//if no problem was defined before, just allocate the memory
-	//otherwise, check if there is already available from last problem and manage memory accordingly
-	if(problem_previously_defined==false)
-	{
-		allocateProblemMemory();
-	}
-	else
-	{
-		//if the allocated memory is not enough
-		if(allocated_problem_size < problem->problem_size)
-		{
-			if(keep_previous_individuals == false)
-			{
-				freeProblemMemory();
-
-				allocateProblemMemory();
-			}
-			else
-			{
-				printf("reallocating\n");
-
-				reallocateProblemMemory();
-			}
-		}
-	}
-
+	individual_size=problem->problem_size + number_of_problems;
 	
-
+	//trial_vector=(double*)malloc(sizeof(double)*problem->problem_size);
+	trial_vector = (double*)malloc(sizeof(double)*(problem->problem_size + number_of_problems));
+	
+	//allocating 
+	allocatePopulations();
 
 	//allocate individual (used for generating new individuals)
 	//ind = (double*)malloc(sizeof(double)*(problem->problem_size + number_of_problems));
@@ -288,25 +249,10 @@ double GDE3::optimize(Optimization_Problem* optimization_problem, int number_of_
 
 	for(i=0;i<population_size;++i)
 	{
-		//if it is the first time it is evolving or any occurence that does not defined the problem before 
-		//or if it was not set to keep previous individuals
-		//then generate full random individuals
-		if(problem_previously_defined==false || keep_previous_individuals == false)
+		for(k=0; k<problem->problem_size; ++k)
 		{
-			for(k=0; k<problem->problem_size; ++k)
-			{
-				population[i][k]= generateRandomVariable(k);
-				//printf("a %.2f\n",(population[i])->subpopulation[j][k]);
-			}
-		}
-		//partially generate individuals
-		else
-		{
-			for(k=last_problem_size; k<problem->problem_size; ++k)
-			{
-				population[i][k]= generateRandomVariable(k);
-				//printf("a %.2f\n",(population[i])->subpopulation[j][k]);
-			}
+			population[i][k]= generateRandomVariable(k);
+			//printf("a %.2f\n",(population[i])->subpopulation[j][k]);
 		}
 	
 		//append objective to the individual
@@ -314,7 +260,6 @@ double GDE3::optimize(Optimization_Problem* optimization_problem, int number_of_
 	}
 	current_pop_size=population_size;
 
-	problem_previously_defined=true;
 
 //	plotHistogram("fitness", tmp,population_size);
 	
@@ -335,6 +280,16 @@ double GDE3::optimize(Optimization_Problem* optimization_problem, int number_of_
 
 		newGeneration();
 		
+		//print solutions every 100 generations
+/*		if(i%100==0)
+		{
+			char filename[64];
+			sprintf(filename,"%d_solutions",i);
+
+			storeSolutions(filename);
+
+		}
+*/
 		/*
 		if(i==500)
 		{
@@ -350,7 +305,10 @@ double GDE3::optimize(Optimization_Problem* optimization_problem, int number_of_
 		}*/
 	}
 	
-	int best_individual= getBestIndividual();
+	fclose(new_fp);
+	fclose(new_fp2);
+	
+//	best_individual= getBestIndividual();
 //	problem->objectiveFunction(population[best_individual], &best_fitness);
 
 //	printf("best fitness found: %f\n",best_fitness);
@@ -358,15 +316,11 @@ double GDE3::optimize(Optimization_Problem* optimization_problem, int number_of_
 	//copy solution to the vector of solution passed
 	//*solution=(double*)malloc(sizeof(double)*problem->problem_size);
 
-	memcpy(*solution,population[best_individual],problem->problem_size*sizeof(double));
+//	memcpy(*solution,population[best_individual],problem->problem_size*sizeof(double));
 //	printArray(population[best_individual], problem->problem_size);
 //	printArray(*solution, problem->problem_size);
 	
 //	return best_fitness;
-
-	//update the size of the problem size
-	last_problem_size= problem->problem_size;
-
 	return 1;
 
 }
@@ -487,6 +441,16 @@ int GDE3::newGeneration()
 
 		int result= isWeakConstraintDominated(trial_vector,parent);
 
+		
+		//fprintf(new_fp, "%f %f\n",trial_vector[problem->problem_size], trial_vector[problem->problem_size+1]);
+		int index= problem->problem_size;
+		if(population[i][index] > -500 && trial_vector[index] > -500)
+		{
+			fprintf(new_fp, "%f %f\n",-population[i][index] + trial_vector[index], -population[i][index+1]+trial_vector[index+1]);
+		}
+		fprintf(new_fp2, "%f %f\n",trial_vector[problem->problem_size], trial_vector[problem->problem_size+1]);
+		
+
 		//if the new individual (trial vector) dominates the parent
 		if(result==1)
 		{
@@ -551,86 +515,29 @@ int GDE3::newGeneration()
 	return 0;
 }
 
-void GDE3::allocateProblemMemory()
-{
-	allocated_problem_size= problem->problem_size*2;
-
-	individual_size= allocated_problem_size + number_of_problems;
-	
-	//trial_vector=(double*)malloc(sizeof(double)*problem->problem_size);
-	trial_vector = (double*)malloc(sizeof(double)*(allocated_problem_size + number_of_problems));
-	
-	//allocating 
-	allocatePopulations();
-}
-
-void GDE3::freeProblemMemory()
-{
-	int i;
-
-	free(trial_vector);
-
-	//for each objective, one subpopulation
-	for(i=0;i<max_population_size;++i)
-	{	
-		free(population[i]);
-	}
-	
-	//tmp population
-	for(i=0;i<max_population_size;++i)
-	{	
-		free(tmp_population[i]);
-	}
-}
-
-void GDE3::reallocateProblemMemory()
-{
-	int i;
-
-	allocated_problem_size= problem->problem_size*2;
-
-	individual_size= allocated_problem_size + number_of_problems;
-	
-	//trial_vector=(double*)malloc(sizeof(double)*problem->problem_size);
-	trial_vector = (double*)realloc(trial_vector, sizeof(double)*(allocated_problem_size + number_of_problems));
-	
-	//for each objective, one subpopulation
-	for(i=0;i<max_population_size;++i)
-	{	
-		population[i]= (double*)realloc(population[i],sizeof(double)*(allocated_problem_size + number_of_problems));
-	}
-	
-	//tmp population
-	for(i=0;i<max_population_size;++i)
-	{	
-		tmp_population[i]= (double*)realloc(tmp_population[i],sizeof(double)*(allocated_problem_size + number_of_problems));
-	}
-}
-
-
+/*
 int GDE3::getBestIndividual()
 {
 	int i;
 	int best_index=0;
 	double best_fitness;
-	//problem->objectiveFunction(population[best_index], &best_fitness);
-	best_fitness= population[best_index][problem->problem_size];
+	problem->objectiveFunction(population[best_index], &best_fitness);
 
 	for(i=1;i<population_size;++i)
 	{	
 		double individual_fitness;
-		individual_fitness= population[i][problem->problem_size];
+		problem->objectiveFunction(population[i], &individual_fitness);
 
 		if(individual_fitness > best_fitness)
 		{
 			best_index= i;
-			best_fitness= individual_fitness;
+			problem->objectiveFunction(population[best_index], &best_fitness);
 		}
 	}
 	
 	return best_index;
 }
-
+*/
 
 void GDE3::generateRandomIndividual()
 {
@@ -655,9 +562,7 @@ void GDE3::generateRandomIndividual(int individual)
 */
 double GDE3::generateRandomVariable(int variable)
 {
-	double a= (random->uniform(0.0,1.0)*(max_limit - min_limit) + min_limit);	
-	//printf("%.2f\n",a);
-	return a; 
+	return (random->uniform(0.0,1.0)*(max_limit*(variable+1)*2 - min_limit) + min_limit);	
 	//return (random->uniform(0.0,1.0)*(max_limit - min_limit) + min_limit);	
 }
 
@@ -669,16 +574,21 @@ void GDE3::allocatePopulations()
 	//number_of_subpopulations= number_of_problems +1;
 
 	//for each objective, one subpopulation
+	population= (double**)malloc(sizeof(double*)*max_population_size);
 	for(i=0;i<max_population_size;++i)
 	{	
-		population[i]= (double*)malloc(sizeof(double)*(allocated_problem_size + number_of_problems));
+		population[i]= (double*)malloc(sizeof(double)*(problem->problem_size + number_of_problems));
 	}
 	
 	//tmp population
+	tmp_population= (double**)malloc(sizeof(double*)*max_population_size);
 	for(i=0;i<max_population_size;++i)
 	{	
-		tmp_population[i]= (double*)malloc(sizeof(double)*(allocated_problem_size + number_of_problems));
+		tmp_population[i]= (double*)malloc(sizeof(double)*(problem->problem_size + number_of_problems));
 	}
+
+	index_array= (int*)malloc(sizeof(int)*max_population_size);
+	diversity_dist= (double*)malloc(sizeof(double)*max_population_size);
 		
 }
 		
@@ -686,7 +596,7 @@ void GDE3::storeSolutions(const char* filename)
 {
 
 //	printf("Storing subpopulation \n");
-	writeCSV(filename, population, current_pop_size, problem->problem_size + number_of_problems,"a");
+	writeCSV(filename, population, current_pop_size, individual_size,"a");
 	
 }
 
