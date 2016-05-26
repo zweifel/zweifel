@@ -2,6 +2,8 @@
 
 #Run "create_lib.sh" on all library directories
 
+mkdir ../lib
+
 CPLUS_INCLUDE_PATH=`pwd`
 export CPLUS_INCLUDE_PATH
 
