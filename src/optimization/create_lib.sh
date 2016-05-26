@@ -27,8 +27,7 @@ fi
 }
 
 echo "Compiling..."
-#make compile 2>/dev/null 1>/dev/null
-make compile
+make compile 2>/dev/null 1>/dev/null
 if_error "ERROR: Source Code does not compile!"
 
 mkdir $tmp_destination
