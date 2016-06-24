@@ -25,4 +25,4 @@ To install it simply enter the src/ directory and run:
 
 # License
 
-Simplified BSD License
+Apache License Version 2.0
