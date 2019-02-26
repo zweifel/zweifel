@@ -18,6 +18,11 @@ However, most of my codes came to depend on it so I decided to make it public.
 
 # Install
 
+First, check if you have libboost installed (required for compiling the random generators):
+```
+sudo apt-get install libboost-all-dev
+```
+
 To install it simply enter the src/ directory and run:
 ```
 ./create_all_libs.sh
